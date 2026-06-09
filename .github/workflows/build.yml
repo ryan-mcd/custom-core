@@ -66,6 +66,9 @@ jobs:
         uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
         id: metadata
         with:
+          # This generates all the tags for your image, you can add custom tags here too!
+          # These are architecture-specific tags. The manifest job below combines them into
+          # architecture-neutral tags like "latest", "latest.YYYYMMDD", and "YYYYMMDD".
           tags: |
             type=raw,value=${{ env.DEFAULT_TAG }}-${{ matrix.arch }}
             type=raw,value=${{ env.DEFAULT_TAG }}.{{date 'YYYYMMDD'}}-${{ matrix.arch }}
@@ -155,6 +158,7 @@ jobs:
     steps:
       - name: Prepare environment
         run: |
+          # Lowercase the image uri
           echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> ${GITHUB_ENV}
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >> ${GITHUB_ENV}
           echo "DATE_TAG=$(date -u +%Y%m%d)" >> ${GITHUB_ENV}
@@ -166,24 +170,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push manifest
+      - name: Create and push manifests
         run: |
           IMAGE_FULL="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}"
 
-          podman manifest create "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}"
-          podman manifest add "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}" "docker://${IMAGE_FULL}:${{ env.DEFAULT_TAG }}-amd64"
-          podman manifest add "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}" "docker://${IMAGE_FULL}:${{ env.DEFAULT_TAG }}-arm64"
-          podman manifest push --all "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}"
-
-          podman manifest create "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}.${DATE_TAG}"
-          podman manifest add "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}.${DATE_TAG}" "docker://${IMAGE_FULL}:${{ env.DEFAULT_TAG }}.${DATE_TAG}-amd64"
-          podman manifest add "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}.${DATE_TAG}" "docker://${IMAGE_FULL}:${{ env.DEFAULT_TAG }}.${DATE_TAG}-arm64"
-          podman manifest push --all "${IMAGE_FULL}:${{ env.DEFAULT_TAG }}.${DATE_TAG}"
-
-          podman manifest create "${IMAGE_FULL}:${DATE_TAG}"
-          podman manifest add "${IMAGE_FULL}:${DATE_TAG}" "docker://${IMAGE_FULL}:${DATE_TAG}-amd64"
-          podman manifest add "${IMAGE_FULL}:${DATE_TAG}" "docker://${IMAGE_FULL}:${DATE_TAG}-arm64"
-          podman manifest push --all "${IMAGE_FULL}:${DATE_TAG}"
+          for tag in \
+            "${{ env.DEFAULT_TAG }}" \
+            "${{ env.DEFAULT_TAG }}.${DATE_TAG}" \
+            "${DATE_TAG}"
+          do
+            podman manifest create "${IMAGE_FULL}:${tag}"
+            podman manifest add "${IMAGE_FULL}:${tag}" "docker://${IMAGE_FULL}:${tag}-amd64"
+            podman manifest add "${IMAGE_FULL}:${tag}" "docker://${IMAGE_FULL}:${tag}-arm64"
+            podman manifest push --all "${IMAGE_FULL}:${tag}" "docker://${IMAGE_FULL}:${tag}"
+          done
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
