@@ -23,27 +23,9 @@ dnf5 install -y tmux \
   ca-certificates \
   uv
 
-### Homebrew-level user-space tooling.
-### Homebrew on Linux normally lives at /home/linuxbrew/.linuxbrew.
-### Use the absolute brew path so this works during non-interactive image builds.
-
-if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
-  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-  brew update
-  brew install fnm
-
-  ### Avoid analytics in a server image.
-  brew analytics off || true
-
-  ### Keep image smaller.
-  brew cleanup --prune=all || true
-else
-  echo "ERROR: Homebrew was expected at /home/linuxbrew/.linuxbrew/bin/brew but was not found."
-  exit 1
-fi
-
 # install -Dm0755 /ctx/usr/local/bin/validate-ai-agent-deps /usr/local/bin/validate-ai-agent-deps
+# install -Dm0755 /ctx/usr/local/bin/install-ai-brew-packages /usr/local/bin/install-ai-brew-packages
+# install -Dm0644 /ctx/usr/lib/systemd/system/ai-brew-packages.service /usr/lib/systemd/system/ai-brew-packages.service
 
 # Use a COPR Example:
 #
@@ -55,3 +37,4 @@ fi
 #### Example for enabling a System Unit File
 
 systemctl enable podman.socket
+# systemctl enable ai-brew-packages.service
