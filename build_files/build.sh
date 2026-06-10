@@ -10,7 +10,40 @@ set -ouex pipefail
 # https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
 
 # this installs a package from fedora repos
-dnf5 install -y tmux 
+dnf5 install -y tmux \
+  git \
+  curl \
+  jq \
+  ripgrep \
+  ffmpeg \
+  unzip \
+  tar \
+  gzip \
+  xz \
+  ca-certificates \
+  uv
+
+### Homebrew-level user-space tooling.
+### Homebrew on Linux normally lives at /home/linuxbrew/.linuxbrew.
+### Use the absolute brew path so this works during non-interactive image builds.
+
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+  brew update
+  brew install fnm
+
+  ### Avoid analytics in a server image.
+  brew analytics off || true
+
+  ### Keep image smaller.
+  brew cleanup --prune=all || true
+else
+  echo "ERROR: Homebrew was expected at /home/linuxbrew/.linuxbrew/bin/brew but was not found."
+  exit 1
+fi
+
+# install -Dm0755 /ctx/usr/local/bin/validate-ai-agent-deps /usr/local/bin/validate-ai-agent-deps
 
 # Use a COPR Example:
 #
