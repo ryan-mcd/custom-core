@@ -3,18 +3,7 @@ FROM scratch AS ctx
 COPY build_files /
 
 # Base Image
-FROM ghcr.io/ublue-os/ucore:stable
-
-# Copy Homebrew files from the brew image
-# And enable
-COPY --from=ghcr.io/ublue-os/brew:latest /system_files /
-RUN --mount=type=cache,dst=/var/cache \
-    --mount=type=cache,dst=/var/log \
-    --mount=type=tmpfs,dst=/tmp \
-    /usr/bin/systemctl preset brew-setup.service && \
-    /usr/bin/systemctl preset brew-update.timer && \
-    /usr/bin/systemctl preset brew-upgrade.timer
-
+FROM ghcr.io/ublue-os/ucore-minimal:stable
 
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:latest
@@ -40,12 +29,21 @@ RUN --mount=type=cache,dst=/var/cache \
 ## make modifications desired in your image and install packages by modifying the build.sh script
 ## the following RUN directive does all the things required to run "build.sh" as recommended.
 
+# Copy Homebrew files from the brew image
+# And enable
+COPY --from=ghcr.io/ublue-os/brew:latest /system_files /
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
-    /ctx/build.sh
-    
+    /ctx/build.sh && \
+    /usr/bin/systemctl preset brew-setup.service && \
+    /usr/bin/systemctl preset brew-update.timer && \
+    /usr/bin/systemctl preset brew-upgrade.timer
+
+COPY system_files/usr/lib/sysusers.d/agent.conf /usr/lib/sysusers.d/agent.conf
+COPY system_files/usr/lib/tmpfiles.d/agent.conf /usr/lib/tmpfiles.d/agent.conf
+
 ### LINTING
 ## Verify final image and contents are correct.
 RUN bootc container lint
